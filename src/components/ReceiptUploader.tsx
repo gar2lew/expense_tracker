@@ -118,7 +118,7 @@ export default function ReceiptUploader({ onScanSuccess }: ReceiptUploaderProps)
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+           accept="image/*,application/pdf"
           capture="environment"
           onChange={onInputChange}
           className="hidden"
