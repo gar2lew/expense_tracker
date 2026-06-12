@@ -1,0 +1,6 @@
+{
+  "name": "Receipt Scanner Expense Tracker",
+  "description": "Personal expense tracker with mobile native receipt scanning, AI parsing, and high-quality printable reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
