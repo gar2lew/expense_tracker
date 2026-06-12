@@ -1,18 +1,20 @@
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from "pdfjs-dist";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Point directly to the file you just copied to the public folder
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+// (Use '/pdf.worker.min.js' if you copied the .js file in Step 1)
 
 /**
  * Formats a number to currency string safely.
  */
-export function formatCurrency(amount: number, currencyCode: string = 'AUD'): string {
+export function formatCurrency(amount: number, currencyCode: string = "AUD"): string {
   try {
-    return new Intl.NumberFormat(window.navigator.language || 'en-AU', {
-      style: 'currency',
-      currency: currencyCode || 'AUD',
+    return new Intl.NumberFormat(window.navigator.language || "en-AU", {
+      style: "currency",
+      currency: currencyCode || "AUD",
     }).format(amount);
   } catch {
-    return `${currencyCode || '$'} ${amount.toFixed(2)}`;
+    return `${currencyCode || "$"} ${amount.toFixed(2)}`;
   }
 }
 
@@ -20,16 +22,16 @@ export function formatCurrency(amount: number, currencyCode: string = 'AUD'): st
  * Formats date string to friendly readable DD/MM/YYYY text.
  */
 export function formatFriendlyDate(dateStr: string): string {
-  if (!dateStr) return '';
-  const parts = dateStr.split('-');
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
   if (parts.length === 3) {
     const [year, month, day] = parts;
     return `${day}/${month}/${year}`;
   }
-  const dateObj = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
+  const dateObj = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
   if (isNaN(dateObj.getTime())) return dateStr;
-  const day = String(dateObj.getDate()).padStart(2, '0');
-  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
   const year = dateObj.getFullYear();
   return `${day}/${month}/${year}`;
 }
@@ -45,13 +47,13 @@ async function renderPdfToCanvas(file: File): Promise<HTMLCanvasElement> {
 
   const viewport = page.getViewport({ scale: 2.0 });
 
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = viewport.width;
   canvas.height = viewport.height;
 
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   if (!ctx) {
-    throw new Error('Failed to get 2D context for PDF canvas render');
+    throw new Error("Failed to get 2D context for PDF canvas render");
   }
 
   await page.render({ canvas, viewport }).promise;
@@ -66,7 +68,7 @@ async function renderPdfToCanvas(file: File): Promise<HTMLCanvasElement> {
 function resizeCanvasToJPEG(
   source: HTMLCanvasElement | HTMLImageElement,
   maxDimension: number,
-  quality: number
+  quality: number,
 ): string {
   let width: number;
   let height: number;
@@ -89,18 +91,18 @@ function resizeCanvasToJPEG(
     }
   }
 
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
 
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   if (!ctx) {
-    throw new Error('Failed to get 2D context for resize canvas');
+    throw new Error("Failed to get 2D context for resize canvas");
   }
 
   ctx.drawImage(source, 0, 0, width, height);
 
-  return canvas.toDataURL('image/jpeg', quality);
+  return canvas.toDataURL("image/jpeg", quality);
 }
 
 /**
@@ -110,13 +112,9 @@ function resizeCanvasToJPEG(
  * Accepts raster images (PNG, JPEG, WebP, etc.) loaded via Image() and PDFs rendered
  * via pdfjs-dist (first page only, at 2x scale for OCR quality).
  */
-export function compressAndToBase64(
-  file: File,
-  maxDimension: number = 1200,
-  quality: number = 0.75
-): Promise<string> {
+export function compressAndToBase64(file: File, maxDimension: number = 1200, quality: number = 0.75): Promise<string> {
   return new Promise((resolve, reject) => {
-    if (file.type === 'application/pdf') {
+    if (file.type === "application/pdf") {
       renderPdfToCanvas(file)
         .then((pdfCanvas) => {
           try {
@@ -141,10 +139,10 @@ export function compressAndToBase64(
           reject(e);
         }
       };
-      img.onerror = () => reject(new Error('Failed to load image into element to resize.'));
+      img.onerror = () => reject(new Error("Failed to load image into element to resize."));
       img.src = event.target?.result as string;
     };
-    reader.onerror = () => reject(new Error('Failed to read file as Data URL'));
+    reader.onerror = () => reject(new Error("Failed to read file as Data URL"));
     reader.readAsDataURL(file);
   });
 }
