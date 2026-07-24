@@ -116,7 +116,7 @@ export default function ExpenseList({ expenses, onDelete, onUpdate }: ExpenseLis
     <div id="expense-list-container" className="space-y-6">
       {/* Summary Totals */}
       <div className="grid grid-cols-2 gap-3">
-        <div className={`bg-white rounded-xl border p-4 shadow-premium cursor-pointer transition-all ${activeTab === 'unpaid' ? 'ring-2 ring-indigo-500 border-indigo-200' : 'border-slate-200/60 hover:border-indigo-200'}`} onClick={() => setActiveTab('unpaid')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveTab('unpaid'); }}>
+        <div className={`bg-white rounded-xl border p-4 shadow-premium cursor-pointer transition-all ${activeTab === 'unpaid' ? 'ring-2 ring-slate-300 border-slate-300' : 'border-slate-200/60 hover:border-slate-300'}`} onClick={() => setActiveTab('unpaid')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveTab('unpaid'); }}>
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Unpaid</span>
             <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{unpaidExpenses.length}</span>
@@ -210,7 +210,7 @@ export default function ExpenseList({ expenses, onDelete, onUpdate }: ExpenseLis
                       </td>
                       <td className="px-6 py-4 text-center">
                         <label className="inline-flex items-center gap-2 cursor-pointer min-h-[44px] min-w-[44px] justify-center" aria-label={`Mark ${expense.vendor} as ${expense.reimbursed ? 'Unpaid' : 'Paid'}`}>
-                          <input type="checkbox" checked={expense.reimbursed} onChange={() => handleReimbursedToggle(expense)} className="w-4 h-4 rounded accent-indigo-600 cursor-pointer" />
+                          <input type="checkbox" checked={expense.reimbursed} onChange={() => handleReimbursedToggle(expense)} className="w-4 h-4 rounded cursor-pointer" style={{ accentColor: 'var(--theme-primary)' }} />
                           <span className={`text-[10px] font-bold ${expense.reimbursed ? 'text-emerald-600' : 'text-amber-600'}`}>{expense.reimbursed ? 'Paid' : 'Unpaid'}</span>
                         </label>
                       </td>
@@ -263,7 +263,7 @@ export default function ExpenseList({ expenses, onDelete, onUpdate }: ExpenseLis
 
                   <div className="flex items-center gap-2">
                     <label className="inline-flex items-center gap-1.5 cursor-pointer min-h-[44px] px-2" aria-label={`Mark ${expense.vendor} as ${expense.reimbursed ? 'Unpaid' : 'Paid'}`}>
-                      <input type="checkbox" checked={expense.reimbursed} onChange={() => handleReimbursedToggle(expense)} className="w-5 h-5 rounded accent-indigo-600 cursor-pointer" />
+                      <input type="checkbox" checked={expense.reimbursed} onChange={() => handleReimbursedToggle(expense)} className="w-5 h-5 rounded cursor-pointer" style={{ accentColor: 'var(--theme-primary)' }} />
                       <span className={`text-[10px] font-bold ${expense.reimbursed ? 'text-emerald-600' : 'text-amber-600'}`}>{expense.reimbursed ? 'Paid' : 'Unpaid'}</span>
                     </label>
                     {expense.imageUrlBase64 && (
@@ -340,7 +340,7 @@ export default function ExpenseList({ expenses, onDelete, onUpdate }: ExpenseLis
               </div>
               <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
                 <button type="button" onClick={() => setEditingExpense(null)} className="px-4 py-2 bg-slate-50 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-100 transition-colors cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-700 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"><Check className="w-4 h-4" />Save Changes</button>
+                <button type="submit" className="px-4 py-2 text-white rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95" style={{ backgroundColor: 'var(--theme-primary)' }}><Check className="w-4 h-4" />Save Changes</button>
               </div>
             </form>
           </div>

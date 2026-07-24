@@ -1,6 +1,41 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@450;600&display=swap');
 @import "tailwindcss";
 
+:root {
+  --theme-primary: #4f46e5;
+  --theme-primary-hover: #4338ca;
+  --theme-primary-light: #6366f1;
+  --theme-primary-bg: #eef2ff;
+}
+
+[data-theme="navy"] {
+  --theme-primary: #1e40af;
+  --theme-primary-hover: #1e3a8a;
+  --theme-primary-light: #3b82f6;
+  --theme-primary-bg: #eff6ff;
+}
+
+[data-theme="emerald"] {
+  --theme-primary: #059669;
+  --theme-primary-hover: #047857;
+  --theme-primary-light: #10b981;
+  --theme-primary-bg: #ecfdf5;
+}
+
+[data-theme="amber"] {
+  --theme-primary: #d97706;
+  --theme-primary-hover: #b45309;
+  --theme-primary-light: #f59e0b;
+  --theme-primary-bg: #fffbeb;
+}
+
+[data-theme="slate"] {
+  --theme-primary: #475569;
+  --theme-primary-hover: #334155;
+  --theme-primary-light: #64748b;
+  --theme-primary-bg: #f1f5f9;
+}
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-heading: "Space Grotesk", sans-serif;

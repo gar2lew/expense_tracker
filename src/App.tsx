@@ -14,6 +14,7 @@ import GeminiAnalytics from './components/GeminiAnalytics';
 import ExpenseList from './components/ExpenseList';
 import PrintButton from './components/PrintButton';
 import DataBackup from './components/DataBackup';
+import AppearanceSettings from './components/AppearanceSettings';
 import SignaturePad from './components/SignaturePad';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { 
@@ -32,6 +33,7 @@ import {
   Wifi,
   WifiOff
 } from 'lucide-react';
+import { getStoredTheme, applyTheme } from './lib/theme';
 import './styles/print.css';
 
 export default function App() {
@@ -55,6 +57,10 @@ export default function App() {
   const [manualDescription, setManualDescription] = useState('');
 
   // Hydrate on mount
+  useEffect(() => {
+    applyTheme(getStoredTheme());
+  }, []);
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -240,7 +246,7 @@ export default function App() {
           
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-200 border border-indigo-600/10">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md border border-black/10" style={{ background: `linear-gradient(135deg, var(--theme-primary-light), var(--theme-primary))` }}>
               <Receipt className="w-5 h-5 animate-float" />
             </div>
             <div>
@@ -403,7 +409,8 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setShowManualForm(true)}
-                      className="px-4.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                      className="px-4.5 py-2 text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                      style={{ backgroundColor: 'var(--theme-primary)' }}
                     >
                       Use Manual Entry Form
                     </button>
@@ -431,7 +438,7 @@ export default function App() {
                               <span className="text-slate-400 font-mono">{formatCurrency(amount, 'AUD')} <span className="font-bold text-indigo-600">({pct}%)</span></span>
                             </div>
                             <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-indigo-600 rounded-full transition-all duration-300" style={{ width: `${pct}%` }}></div>
+                              <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: 'var(--theme-primary)' }}></div>
                             </div>
                           </div>
                         );
@@ -549,13 +556,17 @@ export default function App() {
 
                       <button
                         type="submit"
-                        className="w-full py-2 bg-indigo-600 hover:bg-slate-900 border border-indigo-650 text-white font-bold text-xs rounded-xl transition-all shadow-md cursor-pointer active:scale-95"
+                        className="w-full py-2 text-white font-bold text-xs rounded-xl transition-all shadow-md cursor-pointer active:scale-95"
+                        style={{ backgroundColor: 'var(--theme-primary)' }}
                       >
                         Insert Ledger Record
                       </button>
                     </form>
                   )}
                 </div>
+
+                {/* Appearance Settings */}
+                <AppearanceSettings />
 
                 {/* DB management utility card with soft colors */}
                 <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-premium flex items-center justify-between">
