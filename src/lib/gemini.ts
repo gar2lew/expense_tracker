@@ -61,7 +61,13 @@ export async function parseReceiptImage(file: File): Promise<ReceiptData> {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
+    let errorText = '';
+    try {
+      const errorJson = await response.json();
+      errorText = errorJson?.error || errorText;
+    } catch {
+      errorText = await response.text();
+    }
     throw new Error(errorText || 'Failed to parse receipt with Gemini');
   }
 
@@ -109,7 +115,13 @@ export async function analyzeExpenses(expenses: Expense[]): Promise<ExpenseAnaly
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
+    let errorText = '';
+    try {
+      const errorJson = await response.json();
+      errorText = errorJson?.error || errorText;
+    } catch {
+      errorText = await response.text();
+    }
     throw new Error(errorText || 'Failed to analyze expenses with Gemini');
   }
 
