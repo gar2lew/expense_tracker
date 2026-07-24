@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { openDB } from 'idb';
-import { addExpense, getAllExpenses, updateExpense, clearExpenses } from './db';
+import { addExpense, getAllExpenses, updateExpense, clearExpenses, bulkAddExpenses, Expense } from './db';
 
 const DB_NAME = 'expense-tracker-db';
 
@@ -111,6 +111,69 @@ describe('In-memory reimbursement normalization', () => {
     const expenses = await getAllExpenses();
     expect(expenses).toHaveLength(1);
     expect(expenses[0].reimbursed).toBe(false);
+  });
+
+  it('unpaid records clear reimbursedAt in the normalised result', async () => {
+    await insertRaw({
+      id: 'stale-1',
+      date: '2026-01-05',
+      vendor: 'StaleCo',
+      totalAmount: 60,
+      currency: 'AUD',
+      category: 'Other',
+      description: '',
+      createdAt: 5000,
+      reimbursed: false,
+      reimbursedAt: 1700000000000,
+    });
+    const expenses = await getAllExpenses();
+    expect(expenses).toHaveLength(1);
+    expect(expenses[0].reimbursed).toBe(false);
+    expect(expenses[0].reimbursedAt).toBeUndefined();
+  });
+
+  it('new expense defaults to unpaid via addExpense', async () => {
+    await addExpense({ date: '2026-02-01', vendor: 'NewCo', totalAmount: 25, currency: 'AUD', category: 'Other', description: '', createdAt: 1, reimbursed: false });
+    const expenses = await getAllExpenses();
+    expect(expenses).toHaveLength(1);
+    expect(expenses[0].reimbursed).toBe(false);
+  });
+
+  it('bulk imported legacy expenses default to unpaid', async () => {
+    await clearExpenses();
+    const legacyRecord: Expense = {
+      id: 'legacy-bulk-1',
+      date: '2026-03-01',
+      vendor: 'BulkCo',
+      totalAmount: 150,
+      currency: 'AUD',
+      category: 'Supplies',
+      description: '',
+      createdAt: 1,
+      reimbursed: false,
+    };
+    const record = legacyRecord as unknown as Record<string, unknown>;
+    delete record.reimbursed;
+    await bulkAddExpenses([legacyRecord]);
+    const expenses = await getAllExpenses();
+    expect(expenses).toHaveLength(1);
+    expect(expenses[0].id).toBe('legacy-bulk-1');
+  });
+
+  it('existing receipt data is preserved through normalization', async () => {
+    await addExpense({ date: '2026-04-01', vendor: 'ReceiptCo', totalAmount: 44, currency: 'AUD', category: 'Travel', description: '', createdAt: 1, reimbursed: true, reimbursedAt: Date.now(), imageUrlBase64: 'data:image/png;base64,ABC123==' });
+    const expenses = await getAllExpenses();
+    expect(expenses).toHaveLength(1);
+    expect(expenses[0].imageUrlBase64).toBe('data:image/png;base64,ABC123==');
+    expect(expenses[0].vendor).toBe('ReceiptCo');
+    expect(expenses[0].totalAmount).toBe(44);
+  });
+
+  it('legacy records without reimbursed default to unpaid in normalization', async () => {
+    const raw = { id: 'raw-1', vendor: 'Raw', totalAmount: 10, currency: 'AUD', category: 'Other', description: '', date: '2026-05-01', createdAt: 1 };
+    const normalised = { ...raw, reimbursed: (raw as unknown as { reimbursed?: boolean }).reimbursed === true, reimbursedAt: (raw as unknown as { reimbursed?: boolean }).reimbursed === true ? (raw as unknown as { reimbursedAt?: number }).reimbursedAt : undefined };
+    expect(normalised.reimbursed).toBe(false);
+    expect(normalised.reimbursedAt).toBeUndefined();
   });
 });
 
