@@ -10,7 +10,6 @@ import {
 import { ReceiptData } from './lib/gemini';
 import { formatCurrency, formatFriendlyDate } from './lib/utils';
 import ReceiptUploader from './components/ReceiptUploader';
-import GeminiAnalytics from './components/GeminiAnalytics';
 import ExpenseList from './components/ExpenseList';
 import PrintButton from './components/PrintButton';
 import DataBackup from './components/DataBackup';
@@ -416,9 +415,7 @@ export default function App() {
                     </button>
                   </div>
                 )}
-                
-                <GeminiAnalytics expenses={expenses} isOnline={isOnline} />
-                
+
                 {/* Visual Category Bars panel */}
                 <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-premium">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2 font-heading">

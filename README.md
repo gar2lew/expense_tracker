@@ -1,159 +1,82 @@
 # Expense Tracker - Gaz
 
-**AI-Powered Offline-First Expense Tracker**
+Personal expense tracking with receipt scanning, AI extraction, and reimbursement tracking. PWA installable on iPhone.
 
-A premium single-page application that scans receipts with Gemini AI, stores all data locally in IndexedDB, and generates printable audit-ready expense reports — all running entirely in your browser.
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Framework** | Vite 6 + React 19 (TypeScript) |
-| **Styling** | Tailwind CSS v4 with custom design tokens |
-| **Database** | IndexedDB via `idb` (offline-first, client-side) |
-| **AI Engine** | Google Gemini 3.5 Flash (server-proxied) |
-| **Backend** | Express.js (custom dev/prod server) |
-| **Icons** | Lucide React |
-| **Utilities** | date-fns |
-
----
-
-## Key Features
-
-- **AI Receipt Scanning** — Snap a photo or drag-and-drop a receipt; Gemini extracts vendor, amount, date, currency, and category automatically.
-- **Intelligent Analytics** — AI-powered spending pattern detection, anomaly alerts (duplicate charges, outliers), personalized savings recommendations, and burn-rate forecasting.
-- **100% Offline-First** — All expense data lives in your browser's IndexedDB. No cloud database, no account required. Scan receipts online, manage everything offline.
-- **Printable Audit Reports** — Generate and print professional expense ledger reports with receipt image proof pages and a built-in signature pad.
-- **JSON Backup & Restore** — Export your entire expense database as a downloadable JSON file; import to restore or merge across devices.
-- **Responsive & Accessible** — Full mobile support with touch-optimized inputs, keyboard-navigable UI, and screen-reader-friendly ARIA labels.
-
----
-
-## Prerequisites
-
-- **Node.js** >= 18
-- **npm** >= 9
-- A **Google Gemini API key** ([get one here](https://aistudio.google.com/apikey))
-
-## Environment Variables
-
-Copy `.env.example` to `.env` and fill in your credentials:
-
-```bash
-cp .env.example .env
-```
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GEMINI_API_KEY` | Yes | Your Google Gemini API key for AI receipt parsing and analytics |
-| `APP_URL` | No | The public URL where your app is hosted (set automatically by AI Studio) |
-
-> The API key is **never exposed to the browser**. All Gemini calls are proxied through the Express server (`server.ts`).
-
----
-
-## Local Development
+## Quick Start
 
 ```bash
 # 1. Install dependencies
 npm install
 
-# 2. Set your Gemini API key in .env
-echo 'GEMINI_API_KEY=your-key-here' > .env
+# 2. Configure Gemini API key
+cp .env.example .env
+# Edit .env: GEMINI_API_KEY=your-key-here
 
-# 3. Start the dev server (Vite + Express on port 3000)
-npm run dev
+# 3. Start local development
+npm run dev:api    # Terminal 1: API server on :3000
+npm run dev:ui     # Terminal 2: Vite dev server on :5173
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Or use `npm run dev` to start both.
 
-### Available Scripts
+## Build
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start Vite dev server with Express middleware |
-| `npm run build` | Build frontend + bundle server for production |
-| `npm start` | Run the production build (requires `npm run build` first) |
-| `npm run lint` | Type-check the entire project with `tsc --noEmit` |
-| `npm run clean` | Remove `dist/` build output |
-
----
-
-## Project Structure
-
-```
-.
-├── server.ts                  # Express server + Gemini API proxy
-├── vite.config.ts             # Vite configuration
-├── tsconfig.json              # TypeScript strict mode config
-├── index.html                 # SPA entry point
-├── .env.example               # Environment variable template
-├── src/
-│   ├── main.tsx               # React entry point
-│   ├── App.tsx                # Root application component
-│   ├── index.css              # Tailwind v4 + custom theme tokens
-│   ├── lib/
-│   │   ├── db.ts              # IndexedDB CRUD operations
-│   │   ├── backup.ts          # JSON export/import
-│   │   ├── gemini.ts          # Client-side API bridge + type guards
-│   │   └── utils.ts           # Currency formatting, date utils, image compression
-│   ├── components/
-│   │   ├── ReceiptUploader.tsx # Camera/drag-drop receipt upload
-│   │   ├── ExpenseList.tsx     # Grouped expense table + edit modal
-│   │   ├── GeminiAnalytics.tsx # AI spending analysis dashboard
-│   │   ├── DataBackup.tsx      # Export/import controls
-│   │   ├── SignaturePad.tsx    # HTML5 canvas signature pad
-│   │   └── PrintButton.tsx     # Print trigger with pro-tip
-│   ├── hooks/
-│   │   └── useOnlineStatus.ts  # Browser online/offline detection
-│   └── styles/
-│       └── print.css           # Print-optimized CSS
-└── public/                     # Static assets (if any)
+```bash
+npm run build
 ```
 
----
+Output: `dist/` (static SPA + PWA service worker)
 
-## Deployment
+## Vercel Deployment
 
-### Vercel
-
-1. Push your repository to GitHub.
-2. In Vercel, create a new project and import the repo.
-3. Configure build settings:
-   - **Build Command:** `npm run build`
-   - **Output Directory:** `dist`
-   - **Install Command:** `npm install`
-4. Add the `GEMINI_API_KEY` environment variable in Vercel's project settings.
+1. Push to GitHub.
+2. In Vercel, import the repository.
+3. Configure environment variable:
+   - `GEMINI_API_KEY` — your Google Gemini API key
+4. Build command: `npm run build`
+   Output directory: `dist`
+   Install command: `npm install`
 5. Deploy.
 
-> Note: The Express server (`server.ts`) is bundled with `esbuild` into `dist/server.cjs` during the build step. For Vercel serverless, you may need to adapt the server to a Vercel Function. Alternatively, deploy the full-stack app on **Railway**, **Render**, or **Fly.io** where long-running Express servers are supported natively.
+The `/api/parse-receipt` endpoint is a Vercel Serverless Function. SPA routing is handled by `vercel.json`.
 
-### Docker (Optional)
+## iPhone Installation
 
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY dist/ ./dist/
-EXPOSE 3000
-CMD ["node", "dist/server.cjs"]
-```
+1. Open Safari on iPhone.
+2. Navigate to your deployed Vercel URL.
+3. Tap the Share button.
+4. Tap "Add to Home Screen".
+5. Name it and tap Add.
 
----
+The app opens in standalone mode with its own window.
 
-## Architecture Decisions
+## IndexedDB Warning
 
-- **Offline-First by Design** — IndexedDB stores everything locally. The app works fully offline for viewing, editing, and printing. AI features gracefully degrade when offline.
-- **API Key Security** — The Gemini API key lives exclusively server-side in `process.env`. Client code calls `/api/parse-receipt` and `/api/analyze-expenses` endpoints; the key never touches the browser.
-- **Image Compression** — Receipt images are compressed client-side to max 1200px before storage, keeping IndexedDB usage reasonable.
-- **Type Safety** — Full strict TypeScript with runtime type guards for all API responses. Zero `any` types in the codebase.
-- **Print CSS** — A dedicated `print.css` stylesheet with `@media print` rules hides UI chrome, sizes receipt images, and formats tables for professional paper output.
+Expense data is stored in your browser's IndexedDB. This data is **device-specific**:
+- Data does not sync across devices
+- Clearing Safari website data will delete all stored expenses
+- Export a JSON backup regularly via the Backup panel
+- Google Sheets sync is planned for a future release
 
----
+## Known Offline Limitations
 
-## License
+- Receipt scanning requires internet (Gemini API)
+- The app UI, expense viewing, and toggling work offline
+- Manual entry works offline
 
-MIT
+## Environment Variables
+
+| Variable | Required | Location |
+|---|---|---|
+| `GEMINI_API_KEY` | Yes | `.env` (local), Vercel project env (production) |
+
+Do not commit `.env`. Do not expose `GEMINI_API_KEY` in client-side code.
+
+## Tech Stack
+
+React 19 · TypeScript · Vite 6 · Tailwind CSS · IndexedDB · Gemini AI · PWA
+
+## Documentation
+
+- [Vercel Deployment Checklist](docs/VERCEL_DEPLOYMENT_CHECKLIST.md)
+- [iPhone PWA QA](docs/IPHONE_PWA_QA.md)
