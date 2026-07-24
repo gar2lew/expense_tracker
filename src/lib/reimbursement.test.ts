@@ -1,121 +1,168 @@
-import { describe, it, expect } from 'vitest';
-import { Expense } from './db';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { openDB } from 'idb';
+import { addExpense, getAllExpenses, updateExpense, clearExpenses } from './db';
 
-function makeExpense(overrides: Partial<Expense> = {}): Expense {
-  return {
-    id: 'test-' + Math.random().toString(36).slice(2, 8),
-    date: '2026-07-15',
-    vendor: 'TestCo',
-    totalAmount: 100,
-    currency: 'AUD',
-    category: 'Supplies',
-    description: 'Test expense',
-    createdAt: Date.now(),
-    reimbursed: false,
-    ...overrides,
-  };
-}
+const DB_NAME = 'expense-tracker-db';
 
-describe('Reimbursement model', () => {
-  it('new scanned expense defaults to reimbursed: false', () => {
-    const e = makeExpense();
-    expect(e.reimbursed).toBe(false);
+describe('IndexedDB implementation', () => {
+  beforeEach(async () => {
+    await clearExpenses();
   });
 
-  it('new manual expense defaults to reimbursed: false', () => {
-    const e = makeExpense({ imageUrlBase64: undefined });
-    expect(e.reimbursed).toBe(false);
+  it('database version remains 1', async () => {
+    const db = await openDB(DB_NAME, 1);
+    expect(db.version).toBe(1);
+    db.close();
   });
 
-  it('legacy expense without reimbursed field is treated as unpaid', () => {
-    const legacy = { date: '2026-01-01', vendor: 'Old', totalAmount: 50, currency: 'AUD', category: 'Other', description: '', createdAt: 1000 } as unknown as Expense;
-    const normalized = { ...legacy, reimbursed: legacy.reimbursed ?? false };
-    expect(normalized.reimbursed).toBe(false);
+  it('no by-reimbursed index exists', async () => {
+    const db = await openDB(DB_NAME, 1);
+    const store = db.transaction('expenses').objectStore('expenses');
+    expect(store.indexNames.contains('by-reimbursed')).toBe(false);
+    db.close();
   });
 
-  it('toggle from unpaid to paid sets reimbursed and reimbursedAt', () => {
-    const e = makeExpense({ reimbursed: false });
-    const now = Date.now();
-    const updated: Expense = { ...e, reimbursed: true, reimbursedAt: now };
-    expect(updated.reimbursed).toBe(true);
-    expect(updated.reimbursedAt).toBe(now);
-  });
-
-  it('toggle from paid back to unpaid clears reimbursedAt', () => {
-    const e = makeExpense({ reimbursed: true, reimbursedAt: 1000 });
-    const updated: Expense = { ...e, reimbursed: false, reimbursedAt: undefined };
-    expect(updated.reimbursed).toBe(false);
-    expect(updated.reimbursedAt).toBeUndefined();
-  });
-
-  it('reimbursedAt is set when paid', () => {
-    const now = Date.now();
-    const e = makeExpense({ reimbursed: true, reimbursedAt: now });
-    expect(e.reimbursedAt).toBe(now);
-  });
-
-  it('reimbursedAt is cleared when unpaid', () => {
-    const e = makeExpense({ reimbursed: true, reimbursedAt: undefined });
-    expect(e.reimbursedAt).toBeUndefined();
+  it('no separate transaction inside upgrade callback (db opens without error)', async () => {
+    const db = await openDB(DB_NAME, 1);
+    expect(db.objectStoreNames.contains('expenses')).toBe(true);
+    db.close();
   });
 });
 
-describe('Reimbursement filtering', () => {
-  const expenses: Expense[] = [
-    makeExpense({ id: '1', reimbursed: false, totalAmount: 50 }),
-    makeExpense({ id: '2', reimbursed: false, totalAmount: 30 }),
-    makeExpense({ id: '3', reimbursed: true, totalAmount: 100 }),
-    makeExpense({ id: '4', reimbursed: true, totalAmount: 20 }),
-  ];
-
-  const unpaid = expenses.filter((e) => !e.reimbursed);
-  const paid = expenses.filter((e) => e.reimbursed);
-
-  it('unpaid count is correct', () => {
-    expect(unpaid.length).toBe(2);
+describe('In-memory reimbursement normalization', () => {
+  beforeEach(async () => {
+    await clearExpenses();
   });
 
-  it('paid count is correct', () => {
+  async function insertRaw(record: Record<string, unknown>): Promise<void> {
+    const db = await openDB(DB_NAME, 1);
+    const tx = db.transaction('expenses', 'readwrite');
+    const store = tx.objectStore('expenses');
+    await store.put(record);
+    await tx.done;
+    db.close();
+  }
+
+  it('legacy records without reimbursed field are treated as unpaid', async () => {
+    await insertRaw({
+      id: 'legacy-1',
+      date: '2026-01-01',
+      vendor: 'Old Corp',
+      totalAmount: 50,
+      currency: 'AUD',
+      category: 'Other',
+      description: '',
+      createdAt: 1000,
+    });
+    const expenses = await getAllExpenses();
+    expect(expenses).toHaveLength(1);
+    expect(expenses[0].reimbursed).toBe(false);
+    expect(expenses[0].reimbursedAt).toBeUndefined();
+  });
+
+  it('legacy records with reimbursed: undefined treated as unpaid', async () => {
+    await insertRaw({
+      id: 'legacy-2',
+      date: '2026-01-02',
+      vendor: 'Old Corp',
+      totalAmount: 30,
+      currency: 'AUD',
+      category: 'Travel',
+      description: '',
+      createdAt: 2000,
+      reimbursed: undefined,
+    });
+    const expenses = await getAllExpenses();
+    expect(expenses).toHaveLength(1);
+    expect(expenses[0].reimbursed).toBe(false);
+  });
+
+  it('records with reimbursed: true remain paid', async () => {
+    await insertRaw({
+      id: 'paid-1',
+      date: '2026-01-03',
+      vendor: 'PaidCo',
+      totalAmount: 100,
+      currency: 'AUD',
+      category: 'Supplies',
+      description: '',
+      createdAt: 3000,
+      reimbursed: true,
+      reimbursedAt: 1712345678000,
+    });
+    const expenses = await getAllExpenses();
+    expect(expenses).toHaveLength(1);
+    expect(expenses[0].reimbursed).toBe(true);
+    expect(expenses[0].reimbursedAt).toBe(1712345678000);
+  });
+
+  it('records with reimbursed: false remain unpaid', async () => {
+    await insertRaw({
+      id: 'unpaid-1',
+      date: '2026-01-04',
+      vendor: 'UnpaidCo',
+      totalAmount: 75,
+      currency: 'AUD',
+      category: 'Food & Dining',
+      description: '',
+      createdAt: 4000,
+      reimbursed: false,
+    });
+    const expenses = await getAllExpenses();
+    expect(expenses).toHaveLength(1);
+    expect(expenses[0].reimbursed).toBe(false);
+  });
+});
+
+describe('Paid/Unpaid filtering', () => {
+  beforeEach(async () => {
+    await clearExpenses();
+  });
+
+  it('paid/unpaid filtering still works in application memory', async () => {
+    await addExpense({ date: '2026-06-01', vendor: 'A', totalAmount: 10, currency: 'AUD', category: 'Other', description: '', createdAt: 1, reimbursed: false });
+    await addExpense({ date: '2026-06-02', vendor: 'B', totalAmount: 20, currency: 'AUD', category: 'Other', description: '', createdAt: 2, reimbursed: false });
+    await addExpense({ date: '2026-06-03', vendor: 'C', totalAmount: 30, currency: 'AUD', category: 'Other', description: '', createdAt: 3, reimbursed: true });
+    await addExpense({ date: '2026-06-04', vendor: 'D', totalAmount: 40, currency: 'AUD', category: 'Other', description: '', createdAt: 4, reimbursed: true });
+
+    const all = await getAllExpenses();
+    const unpaid = all.filter((e) => !e.reimbursed);
+    const paid = all.filter((e) => e.reimbursed);
+
+    expect(unpaid.length).toBe(2);
     expect(paid.length).toBe(2);
   });
-
-  it('unpaid total is correct (AUD only)', () => {
-    const total = unpaid.filter((e) => e.currency === 'AUD').reduce((s, e) => s + e.totalAmount, 0);
-    expect(total).toBe(80);
-  });
-
-  it('paid total is correct (AUD only)', () => {
-    const total = paid.filter((e) => e.currency === 'AUD').reduce((s, e) => s + e.totalAmount, 0);
-    expect(total).toBe(120);
-  });
-
-  it('unpaid tab filters correctly', () => {
-    expect(unpaid.every((e) => !e.reimbursed)).toBe(true);
-  });
-
-  it('paid tab filters correctly', () => {
-    expect(paid.every((e) => e.reimbursed)).toBe(true);
-  });
-
-  it('backup import normalises missing reimbursed to false', () => {
-    const legacyRecord = { date: '2026-01-01', vendor: 'Old', totalAmount: 50, currency: 'AUD', category: 'Other', description: '', createdAt: 1000 };
-    const imported: Expense = {
-      id: 'imported-1',
-      date: legacyRecord.date,
-      vendor: legacyRecord.vendor,
-      totalAmount: legacyRecord.totalAmount,
-      currency: legacyRecord.currency,
-      category: legacyRecord.category,
-      description: legacyRecord.description,
-      createdAt: legacyRecord.createdAt,
-      reimbursed: false,
-    };
-    expect(imported.reimbursed).toBe(false);
-  });
 });
 
-describe('Branding', () => {
-  it('title contains Expense Tracker - Gaz', () => {
-    expect(true).toBe(true);
+describe('Toggle persistence', () => {
+  beforeEach(async () => {
+    await clearExpenses();
+  });
+
+  it('toggle from unpaid to paid persists and survives reload', async () => {
+    await addExpense({ date: '2026-07-01', vendor: 'Test', totalAmount: 80, currency: 'AUD', category: 'Travel', description: '', createdAt: 1, reimbursed: false });
+
+    const [before] = await getAllExpenses();
+    expect(before.reimbursed).toBe(false);
+
+    const now = Date.now();
+    await updateExpense({ ...before, reimbursed: true, reimbursedAt: now });
+
+    const [after] = await getAllExpenses();
+    expect(after.reimbursed).toBe(true);
+    expect(after.reimbursedAt).toBe(now);
+  });
+
+  it('toggle from paid back to unpaid persists', async () => {
+    await addExpense({ date: '2026-07-02', vendor: 'Test2', totalAmount: 90, currency: 'AUD', category: 'Supplies', description: '', createdAt: 2, reimbursed: true, reimbursedAt: Date.now() });
+
+    const [before] = await getAllExpenses();
+    expect(before.reimbursed).toBe(true);
+
+    await updateExpense({ ...before, reimbursed: false, reimbursedAt: undefined });
+
+    const [after] = await getAllExpenses();
+    expect(after.reimbursed).toBe(false);
+    expect(after.reimbursedAt).toBeUndefined();
   });
 });

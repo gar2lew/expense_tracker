@@ -20,46 +20,21 @@ interface ExpenseDB extends DBSchema {
     value: Expense;
     indexes: {
       'by-date': string;
-      'by-reimbursed': string;
     };
   };
 }
 
 const DATABASE_NAME = 'expense-tracker-db';
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 1;
 
 let dbPromise: Promise<IDBPDatabase<ExpenseDB>> | null = null;
 
 function getDB() {
   if (!dbPromise) {
     dbPromise = openDB<ExpenseDB>(DATABASE_NAME, DATABASE_VERSION, {
-      upgrade(db, oldVersion) {
-        let store: ReturnType<typeof db.createObjectStore>;
-        if (oldVersion < 1) {
-          store = db.createObjectStore('expenses', { keyPath: 'id' });
-          store.createIndex('by-date', 'date');
-        }
-        if (oldVersion < 2) {
-          const tx = (db as unknown as { transaction: (name: string, mode: string) => IDBObjectStore }).transaction;
-          const os = tx.call(db, 'expenses', 'readwrite') as unknown as IDBObjectStore;
-
-          if (!os.indexNames.contains('by-reimbursed')) {
-            os.createIndex('by-reimbursed', 'reimbursed');
-          }
-
-          const cursorReq = os.openCursor();
-          cursorReq.onsuccess = (event: Event) => {
-            const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
-            if (cursor) {
-              const record = cursor.value as Expense;
-              if (record.reimbursed === undefined) {
-                record.reimbursed = false;
-                cursor.update(record);
-              }
-              cursor.continue();
-            }
-          };
-        }
+      upgrade(db) {
+        const store = db.createObjectStore('expenses', { keyPath: 'id' });
+        store.createIndex('by-date', 'date');
       },
     });
   }
@@ -92,7 +67,13 @@ export async function deleteExpense(id: string): Promise<void> {
 export async function getAllExpenses(): Promise<Expense[]> {
   const db = await getDB();
   const list = await db.getAll('expenses');
-  return list.sort((a, b) => {
+  const normalised = list.map((expense) => ({
+    ...expense,
+    reimbursed: expense.reimbursed === true,
+    reimbursedAt:
+      expense.reimbursed === true ? expense.reimbursedAt : undefined,
+  }));
+  return normalised.sort((a, b) => {
     const dateCompare = b.date.localeCompare(a.date);
     if (dateCompare !== 0) return dateCompare;
     return b.createdAt - a.createdAt;
