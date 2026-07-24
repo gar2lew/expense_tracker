@@ -1,4 +1,4 @@
-# LedgerDesk.AI
+# Expense Tracker - Gaz
 
 **AI-Powered Offline-First Expense Tracker**
 

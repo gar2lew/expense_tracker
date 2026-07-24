@@ -96,6 +96,7 @@ export default function App() {
         description: data.description || 'AI Auto-parsed Receipt',
         imageUrlBase64: imageBase64,
         createdAt: Date.now(),
+        reimbursed: false,
       };
       
       await addExpense(newExp);
@@ -125,6 +126,7 @@ export default function App() {
         category: manualCategory,
         description: manualDescription || 'Manually entered transaction',
         createdAt: Date.now(),
+        reimbursed: false,
       };
 
       await addExpense(newExp);
@@ -242,7 +244,7 @@ export default function App() {
               <Receipt className="w-5 h-5 animate-float" />
             </div>
             <div>
-              <span className="font-extrabold text-slate-900 text-sm leading-none tracking-tight block font-heading sm:text-base">LedgerDesk.AI</span>
+              <span className="font-extrabold text-slate-900 text-sm leading-none tracking-tight block font-heading sm:text-base">Expense Tracker - Gaz</span>
               <div className="flex items-center gap-1.5 mt-1">
                 {isOnline ? (
                   <span className="inline-flex items-center gap-1 text-[9px] text-emerald-700 font-extrabold bg-emerald-50 border border-emerald-100/50 px-1.5 py-0.5 rounded-sm">

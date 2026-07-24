@@ -63,7 +63,9 @@ export async function importExpensesFromJSON(file: File): Promise<number> {
               category: String(item.category || 'Other'),
               description: String(item.description || ''),
               imageUrlBase64: item.imageUrlBase64 !== undefined ? String(item.imageUrlBase64) : undefined,
-              createdAt: Number(item.createdAt) || Date.now()
+              createdAt: Number(item.createdAt) || Date.now(),
+              reimbursed: item.reimbursed === true,
+              reimbursedAt: typeof item.reimbursedAt === 'number' ? item.reimbursedAt : undefined,
             });
           }
         }
