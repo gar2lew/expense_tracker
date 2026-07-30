@@ -13,7 +13,16 @@ export default function ReceiptUploader({ onScanSuccess }: ReceiptUploaderProps)
   const [statusMessage, setStatusMessage] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const openCamera = () => {
+    cameraInputRef.current?.click();
+  };
+
+  const openFilePicker = () => {
+    fileInputRef.current?.click();
+  };
 
   const handleFileChange = async (file: File) => {
     if (!file) return;
@@ -74,7 +83,7 @@ export default function ReceiptUploader({ onScanSuccess }: ReceiptUploaderProps)
   };
 
   const triggerInput = () => {
-    fileInputRef.current?.click();
+    openCamera();
   };
 
   return (
@@ -116,10 +125,18 @@ export default function ReceiptUploader({ onScanSuccess }: ReceiptUploaderProps)
         } ${loading ? 'pointer-events-none' : ''}`}
       >
         <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={onInputChange}
+          className="hidden"
+          disabled={loading}
+        />
+        <input
           ref={fileInputRef}
           type="file"
-           accept="image/*,application/pdf"
-          capture="environment"
+          accept="image/*,application/pdf"
           onChange={onInputChange}
           className="hidden"
           disabled={loading}
@@ -166,13 +183,34 @@ export default function ReceiptUploader({ onScanSuccess }: ReceiptUploaderProps)
               <p className="text-xs font-medium text-slate-600">
                 <span className="text-indigo-600 font-bold hover:underline">Click to capture</span> or drag photo here
               </p>
-              <p className="text-[10px] text-slate-400">Supports JPEG, Portable Image, and Mobile Document Capture</p>
+              <p className="text-[10px] text-slate-400">Supports images, PDF invoices, and mobile document capture</p>
             </div>
           </div>
         )}
       </div>
 
-      <div className="mt-4.5 flex items-center gap-2 text-[10.5px] text-slate-400 font-medium">
+      <div className="flex flex-col sm:flex-row gap-2 mt-4.5 no-print">
+        <button
+          type="button"
+          onClick={openCamera}
+          disabled={loading}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-40 active:scale-95"
+        >
+          <Camera className="w-4 h-4" aria-hidden="true" />
+          Take Photo
+        </button>
+        <button
+          type="button"
+          onClick={openFilePicker}
+          disabled={loading}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-40 active:scale-95"
+        >
+          <Upload className="w-4 h-4" aria-hidden="true" />
+          Upload File
+        </button>
+      </div>
+
+      <div className="mt-3 flex items-center gap-2 text-[10.5px] text-slate-400 font-medium">
         <FileText className="w-3.5 h-3.5 text-slate-400" />
         <span>Indexed database and raw scans are locked on your local sandbox storage</span>
       </div>
