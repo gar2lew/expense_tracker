@@ -106,6 +106,38 @@ function resizeCanvasToJPEG(
 }
 
 /**
+ * Compresses a canvas directly to a JPEG base64 data URL,
+ * resizing it to fit within maxDimension on the longest edge.
+ * Used for Smart Scanner output that is already cropped and enhanced.
+ */
+export function canvasToCompressedBase64(
+  canvas: HTMLCanvasElement,
+  maxDimension: number = 1200,
+  quality: number = 0.75
+): string {
+  let { width, height } = canvas;
+
+  if (width > maxDimension || height > maxDimension) {
+    if (width > height) {
+      height = Math.round((height * maxDimension) / width);
+      width = maxDimension;
+    } else {
+      width = Math.round((width * maxDimension) / height);
+      height = maxDimension;
+    }
+  }
+
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = width;
+  outCanvas.height = height;
+  const ctx = outCanvas.getContext('2d');
+  if (!ctx) throw new Error('Failed to get 2D context for canvas compression');
+
+  ctx.drawImage(canvas, 0, 0, width, height);
+  return outCanvas.toDataURL('image/jpeg', quality);
+}
+
+/**
  * Compresses an image or PDF file by resizing it to a maximum of 1200px on its longest edge
  * and converts it to a compressed JPEG Base64 data URL.
  *

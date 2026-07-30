@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
-import { Camera, Upload, Sparkles, AlertCircle, FileText } from 'lucide-react';
-import { parseReceiptImage, ReceiptData } from '../lib/gemini';
+import { useState, useRef } from 'react';
+import { Camera, Upload, Sparkles, AlertCircle, FileText, ScanLine } from 'lucide-react';
+import { parseReceiptImage, parseReceiptFromCanvas, ReceiptData } from '../lib/gemini';
 import { compressAndToBase64 } from '../lib/utils';
+import SmartScanner from './SmartScanner';
 
 interface ReceiptUploaderProps {
   onScanSuccess: (data: ReceiptData, imageBase64: string) => void;
@@ -13,6 +14,7 @@ export default function ReceiptUploader({ onScanSuccess }: ReceiptUploaderProps)
   const [statusMessage, setStatusMessage] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -24,10 +26,37 @@ export default function ReceiptUploader({ onScanSuccess }: ReceiptUploaderProps)
     fileInputRef.current?.click();
   };
 
+  const processScannedCanvas = async (croppedCanvas: HTMLCanvasElement) => {
+    setShowScanner(false);
+    setPreviewUrl(croppedCanvas.toDataURL('image/jpeg', 0.9));
+    setError(null);
+    setLoading(true);
+
+    try {
+      setStatusMessage('Optimizing image resolutions...');
+      const base64Img = compressAndToBase64FromCanvas(croppedCanvas);
+
+      setStatusMessage('Analyzing details with Gemini AI...');
+      const parsedData = await parseReceiptFromCanvas(croppedCanvas);
+
+      setStatusMessage('Success!');
+      onScanSuccess(parsedData, base64Img);
+
+      setPreviewUrl(null);
+      setError(null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('Smart scan receipt parse failed:', message);
+      setError(message || 'AI failed to process the scanned receipt.');
+    } finally {
+      setLoading(false);
+      setStatusMessage('');
+    }
+  };
+
   const handleFileChange = async (file: File) => {
     if (!file) return;
 
-    // Show instant visual preview
     const objectUrl = URL.createObjectURL(file);
     setPreviewUrl(objectUrl);
     setError(null);
@@ -41,10 +70,8 @@ export default function ReceiptUploader({ onScanSuccess }: ReceiptUploaderProps)
       const parsedData = await parseReceiptImage(file);
 
       setStatusMessage('Success!');
-      // Send parsed data and compressed base64 to parent state
       onScanSuccess(parsedData, base64Img);
-      
-      // Reset uploader state
+
       setPreviewUrl(null);
       setError(null);
     } catch (err: unknown) {
@@ -88,6 +115,13 @@ export default function ReceiptUploader({ onScanSuccess }: ReceiptUploaderProps)
 
   return (
     <div id="receipt-uploader-root" className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-premium hover:shadow-premium-hover transition-shadow duration-300">
+      {showScanner && (
+        <SmartScanner
+          onCapture={processScannedCanvas}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
+
       <div className="flex items-center gap-3 mb-5">
         <div className="p-2.5 bg-gradient-to-br from-indigo-50 to-indigo-100 text-indigo-600 rounded-xl shadow-2xs border border-indigo-100/50">
           <Camera className="w-5 h-5" />
@@ -148,11 +182,9 @@ export default function ReceiptUploader({ onScanSuccess }: ReceiptUploaderProps)
               <Sparkles className="w-5 h-5 text-indigo-600 animate-pulse" />
               <div className="absolute inset-0 border-2 border-indigo-500/30 rounded-full animate-ping opacity-60"></div>
             </div>
-            
+
             <div className="space-y-1.5 w-full">
               <p className="text-xs font-bold text-slate-700">{statusMessage}</p>
-              
-              {/* Premium Slim Shimmering Progress Bar */}
               <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-600 to-indigo-500 bg-shimmer rounded-full bg-[size:200%_100%]"></div>
               </div>
@@ -192,9 +224,18 @@ export default function ReceiptUploader({ onScanSuccess }: ReceiptUploaderProps)
       <div className="flex flex-col sm:flex-row gap-2 mt-4.5 no-print">
         <button
           type="button"
+          onClick={() => setShowScanner(true)}
+          disabled={loading}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-40 active:scale-95 shadow-sm"
+        >
+          <ScanLine className="w-4 h-4" aria-hidden="true" />
+          Smart Scan
+        </button>
+        <button
+          type="button"
           onClick={openCamera}
           disabled={loading}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-40 active:scale-95"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-40 active:scale-95"
         >
           <Camera className="w-4 h-4" aria-hidden="true" />
           Take Photo
@@ -216,4 +257,27 @@ export default function ReceiptUploader({ onScanSuccess }: ReceiptUploaderProps)
       </div>
     </div>
   );
+}
+
+function compressAndToBase64FromCanvas(canvas: HTMLCanvasElement): string {
+  let { width, height } = canvas;
+  const maxDim = 1200;
+
+  if (width > maxDim || height > maxDim) {
+    if (width > height) {
+      height = Math.round((height * maxDim) / width);
+      width = maxDim;
+    } else {
+      width = Math.round((width * maxDim) / height);
+      height = maxDim;
+    }
+  }
+
+  const out = document.createElement('canvas');
+  out.width = width;
+  out.height = height;
+  const ctx = out.getContext('2d');
+  if (!ctx) throw new Error('Failed to get 2D context');
+  ctx.drawImage(canvas, 0, 0, width, height);
+  return out.toDataURL('image/jpeg', 0.75);
 }

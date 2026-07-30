@@ -1,4 +1,4 @@
-import { compressAndToBase64 } from './utils';
+import { compressAndToBase64, canvasToCompressedBase64 } from './utils';
 import { Expense } from './db';
 
 export interface ReceiptData {
@@ -58,6 +58,37 @@ export async function parseReceiptImage(file: File): Promise<ReceiptData> {
       imageBytes: base64Content,
       mimeType: mimeType,
     }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || 'Failed to parse receipt with Gemini');
+  }
+
+  const parsedJson: unknown = await response.json();
+  if (!isReceiptData(parsedJson)) {
+    throw new Error('Invalid receipt data received from server');
+  }
+  return parsedJson;
+}
+
+/**
+ * Parses a receipt from a pre-processed canvas (e.g., from Smart Scanner).
+ * The canvas is compressed and sent to the server-side Gemini proxy.
+ */
+export async function parseReceiptFromCanvas(
+  canvas: HTMLCanvasElement,
+  quality: number = 0.8
+): Promise<ReceiptData> {
+  const base64DataUrl = canvasToCompressedBase64(canvas, 1200, quality);
+
+  const commaIndex = base64DataUrl.indexOf(',');
+  const base64Content = commaIndex !== -1 ? base64DataUrl.substring(commaIndex + 1) : base64DataUrl;
+
+  const response = await fetch('/api/parse-receipt', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imageBytes: base64Content, mimeType: 'image/jpeg' }),
   });
 
   if (!response.ok) {
